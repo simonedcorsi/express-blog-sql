@@ -49,18 +49,32 @@ function show(req, res) {
 
     const { id } = req.params;
 
-    const sql = 'SELECT * FROM posts WHERE id = ?';
+    const postsSql = 'SELECT * FROM posts WHERE id = ?';
+    const tagsSql = `
+        SELECT tags.label
+        FROM tags
+        JOIN post_tag
+        ON tags.id = post_tag.tag_id
+        WHERE post_tag.post_id = ?
+        `;
 
-    connection.query(sql, [id], (err, results) => {
+    connection.query(postsSql, [id], (err, postsResults) => {
         if (err) return res.status(500).json({
             error:'Database Error SHOW'
         })
 
-        if (results.length === 0) return res.status(404).json({
+        if ( postsResults.length === 0 ) return res.status(404).json({
             error:'Not Found'
         })
 
-        res.json(results[0]);
+        const post = postsResults[0];
+
+        connection.query(tagsSql, [id], (err, tagsResults) => {
+            if (err) return res.status(500).json({ error: 'Database query failed ' });
+
+            post.tags = tagsResults;
+            res.json(post);
+        });
     })
 
 }
